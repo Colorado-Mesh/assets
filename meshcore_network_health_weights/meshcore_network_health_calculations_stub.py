@@ -1,5 +1,5 @@
 import modules.logs as logging
-from assets.meshcore_network_health_weights import (
+from assets.meshcore_network_health_weights.math_utils import (
     cap_value,
     safe_log,
     safe_log2,
