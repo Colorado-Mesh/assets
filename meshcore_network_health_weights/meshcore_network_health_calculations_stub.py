@@ -1,7 +1,12 @@
+import modules.logs as logging
+from assets.meshcore_network_health_weights import (
+    cap_value,
+    safe_log,
+    safe_log2,
+    double_sqrt_curve
+)
 from collections.abc import Callable
 from typing import Optional, Any, List
-
-import modules.logs as logging
 
 
 class MeshCoreNetworkHealthCalculationRange:
@@ -69,9 +74,7 @@ class MeshCoreNetworkHealthCalculation:
         return None
 
 
-def prepare_calculations(value_lambdas: dict[str, Callable[[], Any]],
-                         override_calculation_lambdas: dict[str, Callable[[Any], float]]) -> list[
-    MeshCoreNetworkHealthCalculation]:
+def prepare_calculations(value_lambdas: dict[str, Callable[[], Any]]) -> list[MeshCoreNetworkHealthCalculation]:
     """
         Max 10 points per category, but each can be weighed differently in final count (* multiplier), then percentage as max 100%
 
@@ -249,7 +252,7 @@ def prepare_calculations(value_lambdas: dict[str, Callable[[], Any]],
             multiplier=1,
             value_retrieval=value_lambdas["number_of_messages_past_24h"],
             # 1000 messages = ~9.9 for max score, 5 messages = ~2.3, 2 messages = 1, 1 (or 0 maxed to 1) message = 0
-            override_calculation=override_calculation_lambdas["number_of_messages_past_24h"],
+            override_calculation=lambda _input: cap_value(safe_log2(_input)),
         ),
         MeshCoreNetworkHealthCalculation(
             _id="message_percentage_of_all_traffic_past_24h",
@@ -289,7 +292,8 @@ def prepare_calculations(value_lambdas: dict[str, Callable[[], Any]],
             multiplier=1,
             value_retrieval=value_lambdas["largest_hop_count_past_24h"],
             # Want to encourage high number (interconnected repeaters)
-            override_calculation=override_calculation_lambdas["largest_hop_count_past_24h"],
+            override_calculation=lambda _input: cap_value(
+                double_sqrt_curve(_input=_input['_input'], _max=_input['_max'])),
         ),
         MeshCoreNetworkHealthCalculation(
             _id="unique_route_count",
@@ -298,7 +302,7 @@ def prepare_calculations(value_lambdas: dict[str, Callable[[], Any]],
             multiplier=1,
             value_retrieval=value_lambdas["unique_route_count"],
             # Want to encourage high number (interconnected repeaters)
-            override_calculation=override_calculation_lambdas["unique_route_count"],
+            override_calculation=lambda _input: cap_value(safe_log(_input) - 2),
         ),
         MeshCoreNetworkHealthCalculation(
             _id="top_path_nonreliance",
@@ -326,7 +330,7 @@ def prepare_calculations(value_lambdas: dict[str, Callable[[], Any]],
             description="We don't want all the messages to just be coming from the same small group of users.",
             multiplier=1,
             value_retrieval=value_lambdas["unique_users_count"],
-            override_calculation=override_calculation_lambdas["unique_users_count"],
+            override_calculation=lambda _input: cap_value(safe_log(_input * 10)),
         ),
         MeshCoreNetworkHealthCalculation(
             _id="top_senders_target_percentage",
@@ -357,7 +361,7 @@ def prepare_calculations(value_lambdas: dict[str, Callable[[], Any]],
             # Colorado is 280x380 mi, longest distance could be 472 mi (759 km) diagonal
             # Thanks Miho for the sqrt curve, still great after all these years
             # Double square root of max travel distance in Colorado, divided by 2-byte-hop-cap/2 (score 10 around 50 km)
-            override_calculation=override_calculation_lambdas["average_single_hop_distance"],
+            override_calculation=lambda _input: cap_value(double_sqrt_curve(_input=_input, _max=(759 / 15))),
         ),
         MeshCoreNetworkHealthCalculation(
             _id="longest_single_hop_distance",
@@ -368,6 +372,6 @@ def prepare_calculations(value_lambdas: dict[str, Callable[[], Any]],
             # Colorado is 280x380 mi, longest distance could be 472 mi (759 km) diagonal
             # Thanks Miho for the sqrt curve, still great after all these years
             # Double square root (50 km = 5, 100 km = 6, 200 km = 7, 400 km = 8.5)
-            override_calculation=override_calculation_lambdas["longest_single_hop_distance"],
+            override_calculation=lambda _input: cap_value(double_sqrt_curve(_input=_input, _max=759))
         ),
     ]

@@ -12,6 +12,7 @@ def double_sqrt_curve(_input: float, _max: float) -> float:
         _max=10,
     )
 
+
 def cap_value(score: float, _max: float = 10, _min: float = 0) -> float:
     """Cap a value between min and max"""
     return max(_min, min(score, _max))
