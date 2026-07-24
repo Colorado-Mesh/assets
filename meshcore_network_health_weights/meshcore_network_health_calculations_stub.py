@@ -60,7 +60,7 @@ class MeshCoreNetworkHealthCalculation:
 
         try:
             _input: Any = self.value_retrieval()
-        except Exception:  # Data was not loaded/parsed properly, could not extract value properly
+        except Exception as e:  # Data was not loaded/parsed properly, could not extract value properly
             _input = None  # Will trigger range failure and ultimately return None (will be ignored downstream)
 
         if self.override_calculation:
@@ -93,8 +93,6 @@ def prepare_calculations(value_lambdas: dict[str, Callable[[], Any]]) -> list[Me
         # Message-to-non-message (advert) ratio (past 24h) - 0-5% = 0, 5-15% = 2, 15-25% = 4, 25-45% = 6, 45-70% = 8, 70-100% = 10
         # Number of unique users (past 24h) -
         # Top 10 senders is what percentage of all message senders -
-        # Average hop count (past 24h) -
-        # Largest hop count (past 24h) -
         # Average repeater-repeater (space between repeaters) distance (past 24h) -
         # Longest repeater-repeater (single hop) distance (past 24h) -
         # Unique route count (past 24h) -
@@ -268,32 +266,6 @@ def prepare_calculations(value_lambdas: dict[str, Callable[[], Any]]) -> list[Me
                 MeshCoreNetworkHealthCalculationRange(score=8, minimum=0.45, maximum=0.70),
                 MeshCoreNetworkHealthCalculationRange(score=10, minimum=0.70, maximum=None),
             ]
-        ),
-        MeshCoreNetworkHealthCalculation(
-            _id="average_hop_count_past_24h",
-            name="Average Hop Count (Past 24 Hours)",
-            description="As the mesh grows in geographical distance, we should start seeing completed routes with higher hop counts",
-            multiplier=1,
-            value_retrieval=value_lambdas["average_hop_count_past_24h"],
-            # Want to encourage low number (good core repeaters)
-            ranges=[
-                MeshCoreNetworkHealthCalculationRange(score=0, minimum=None, maximum=4),
-                MeshCoreNetworkHealthCalculationRange(score=2, minimum=4, maximum=8),
-                MeshCoreNetworkHealthCalculationRange(score=4, minimum=8, maximum=12),
-                MeshCoreNetworkHealthCalculationRange(score=6, minimum=12, maximum=16),
-                MeshCoreNetworkHealthCalculationRange(score=8, minimum=16, maximum=32),
-                MeshCoreNetworkHealthCalculationRange(score=10, minimum=32, maximum=None),
-            ]
-        ),
-        MeshCoreNetworkHealthCalculation(
-            _id="largest_hop_count_past_24h",
-            name="Largest Hop Count (Past 24 Hours)",
-            description="As the mesh grows in geographical distance, we should start seeing completed routes with higher hop counts",
-            multiplier=1,
-            value_retrieval=value_lambdas["largest_hop_count_past_24h"],
-            # Want to encourage high number (interconnected repeaters)
-            override_calculation=lambda _input: cap_value(
-                double_sqrt_curve(_input=_input['_input'], _max=_input['_max'])),
         ),
         MeshCoreNetworkHealthCalculation(
             _id="unique_route_count",
